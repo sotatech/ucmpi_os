@@ -36,7 +36,7 @@ echo "=== Installing Node-RED custom nodes ==="
 cd ~/.node-red
 # Assuming you have packaged your node-red-contrib-cytech folder with:
 #   10-ucmpi_os.js, 10-ucmpi_os.html, modules.js, package.json
-npm install /home/pi/node-red-contrib-cytech
+npm install /home/pi/ucmpi_os/node-red-contrib-cytech
 
 echo "=== Installing local dependencies (pinned for compatibility) ==="
 cd ~/ucmpi_os
