@@ -12,7 +12,7 @@ const _date = "100921"
 const cp = require('child_process');
 const mqttlib = require('mqtt');
 const fs = require('fs');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 var path = require('path');
 const uid = require('uid-safe');
 
