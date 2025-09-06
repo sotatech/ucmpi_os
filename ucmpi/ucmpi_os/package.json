@@ -1,30 +1,43 @@
 {
-  "name": "alphawerk",
+  "name": "node-red-contrib-cytech",
   "version": "1.0.0",
-  "description": "",
-  "main": "manager.js",
-  "dependencies": {
-    "bcrypt": "^2.0.1",
-    "body-parser": "^1.18.3",
-    "cookie-parser": "^1.4.3",
-    "express": "^4.16.3",
-    "express-fileupload": "^0.4.0",
-    "express-session": "^1.15.6",
-    "express-ws": "^4.0.0",
-    "fs-extra": "^7.0.0",
-    "memorystore": "^1.6.0",
-    "mqtt": "^2.18.0",
-    "pug": "^2.0.3",
-    "request": "^2.87.0",
-    "rpi-gpio": "^1.0.0",
-    "serialport": "^6.2.0",
-    "uid-safe": "^2.1.5",
-    "xml2js": "^0.4.19"
-  },
-  "devDependencies": {},
+  "description": "Node-RED nodes for Cytech Comfort (UCM/Pi) alarm integration over RS485 via MQTT bridge",
+  "main": "10-ucmpi_os.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"No tests specified\" && exit 0"
   },
-  "author": "Matthew Brain",
-  "license": "LicenseRef-LICENSE"
+  "keywords": [
+    "node-red",
+    "cytech",
+    "comfort",
+    "alarm",
+    "ucmpi",
+    "rs485",
+    "mqtt"
+  ],
+  "author": "Pat Rooney Sept 2025",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "body-parser": "^1.20.2",
+    "cookie-parser": "^1.4.6",
+    "express": "^4.19.2",
+    "express-fileupload": "^1.5.1",
+    "express-handlebars": "^3.0.0",
+    "express-session": "^1.18.0",
+    "express-ws": "^5.0.2",
+    "fs-extra": "^11.2.0",
+    "memorystore": "^1.6.7",
+    "mqtt": "^4.3.7",
+    "request": "^2.88.2",
+    "serialport": "^9.2.8",
+    "mitt": "^3.0.0",
+    "xml2js": "^0.6.2",
+    "uid-safe": "^2.1.5"
+  },
+  "node-red": {
+    "nodes": {
+      "cytech": "10-ucmpi_os.js"
+    }
+  }
 }
