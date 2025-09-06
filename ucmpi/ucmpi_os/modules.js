@@ -6,7 +6,7 @@
 	support@alphawerk.co.uk
 */
 
-const _version = "2.0.0.0"
+const _version = "2.0.0.1"
 const _date = "100921"
 
 const cp = require('child_process');
