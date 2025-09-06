@@ -26,7 +26,7 @@ if [ -d ~/ucmpi_os/temp ]; then
 fi
 mkdir ~/ucmpi_os/temp
 cd ~/ucmpi_os/temp
-git clone https://github.com/alphawerk/ucmpi_os.git
+git clone https://github.com/sotatech/ucmpi_os.git
 
 # Copy service scripts into place
 cp -r ucmpi_os/ucmpi/ucmpi_os/* ~/ucmpi_os
