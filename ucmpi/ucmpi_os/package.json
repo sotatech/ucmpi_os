@@ -21,23 +21,23 @@
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.2",
     "cookie-parser": "^1.4.6",
-    "express": "^4.19.2",
-    "express-fileupload": "^1.5.1",
+    "express": "^4.21.1",
+    "express-fileupload": "^1.4.3",
     "express-handlebars": "^3.0.0",
-    "express-session": "^1.18.0",
+    "express-session": "^1.17.3",
     "express-ws": "^5.0.2",
     "fs-extra": "^11.2.0",
     "memorystore": "^1.6.7",
     "mqtt": "^4.3.7",
     "request": "^2.88.2",
-    "serialport": "^9.2.8",
+    "serialport": "9.2.8",
     "mitt": "^3.0.0",
     "xml2js": "^0.6.2",
-    "uid-safe": "^2.1.5"
+    "uid-safe": "^2.1.5",
+    "rpi-gpio": "^2.1.7"
   },
-  "node-red": {
-    "nodes": {
-      "cytech": "10-ucmpi_os.js"
-    }
-  }
-}
+  "overrides": {
+    "epoll": "^4.0.0"
+  },
+  "engines": {
+    "node": ">
