@@ -28,16 +28,20 @@
     "express-ws": "^5.0.2",
     "fs-extra": "^11.2.0",
     "memorystore": "^1.6.7",
+    "mitt": "^3.0.0",
     "mqtt": "^4.3.7",
     "request": "^2.88.2",
+    "rpi-gpio": "^2.1.7",
     "serialport": "9.2.8",
-    "mitt": "^3.0.0",
-    "xml2js": "^0.6.2",
     "uid-safe": "^2.1.5",
-    "rpi-gpio": "^2.1.7"
+    "xml2js": "^0.6.2"
   },
   "overrides": {
     "epoll": "^4.0.0"
   },
-  "engines": {
-    "node": ">
+  "node-red": {
+    "nodes": {
+      "cytech": "10-ucmpi_os.js"
+    }
+  }
+}

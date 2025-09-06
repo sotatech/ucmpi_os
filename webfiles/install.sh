@@ -40,7 +40,26 @@ npm install /home/pi/ucmpi_os/node-red-contrib-cytech
 
 echo "=== Installing local dependencies (pinned for compatibility) ==="
 cd ~/ucmpi_os
-npm install epoll mqtt serialport@9.2.8 mitt xml2js bcryptjs express express-ws express-handlebars@3.0.0 express-handlebars-layouts express-session memorystore body-parser cookie-parser request express-fileupload xml2js fs-extra path uid-safe https rpi-gpio os child_process > /dev/null 2>&1 || error_exit "Error installing dependencies"
+
+npm install \
+  bcryptjs \
+  body-parser \
+  cookie-parser \
+  express \
+  express-fileupload \
+  express-handlebars@3.0.0 \
+  express-session \
+  express-ws \
+  fs-extra \
+  memorystore \
+  mitt \
+  mqtt@4.3.7 \
+  request \
+  rpi-gpio \
+  serialport@9.2.8 \
+  uid-safe \
+  xml2js \
+  || error_exit "Error installing dependencies"
 
 echo "=== Configuring Mosquitto (local broker) ==="
 sudo systemctl enable mosquitto
