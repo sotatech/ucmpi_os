@@ -2,12 +2,12 @@
 	(c) 2018, 2021 alphaWerk Ltd
 	Version: Check const _version
 	Date: Check const _date
-
+	Modified by Pat Rooney
 	support@alphawerk.co.uk
 */
 
-const _version = "2.0.0.2"
-const _date = "200722"
+const _version = "2.0.0.3"
+const _date = "202589"
 
 const express = require('express');
 const exphbs = require('express-handlebars');
@@ -39,9 +39,10 @@ const expressWs = require('express-ws')(app);
 
 const listenport = 1080;
 const configPath = '/etc/ucmpi_os/config';
-const watchdogpin = 13;
-const watchdogwarn = 12;
-const alertpin = 20;
+// New pin numbering
+const watchdogpin = 525;
+const watchdogwarn = 524;
+const alertpin = 532;
 
 const watchdogcycle = 7000;
 const watchdoghigh = 2000;
@@ -78,6 +79,7 @@ modules.init("manager", _version, _date)
 // Webserver
 var hbs = exphbs.create({
     extname      :'hbs',
+	defaultLayout: false,     // Don't look for startup file main.hbs
     layoutsDir   : 'manager/views',
     partialsDir  : [
         'manager/views/layouts',
@@ -914,7 +916,7 @@ function gpioinput(channel, value) {
 				debug("Watchdog preparing for shutdown");
 				watchdog_reboot = setTimeout(() => {
 					debug("System shut down");
-					cp.spawn('sudo shutdown -h 0',{"shell":true});
+				//	cp.spawn('sudo shutdown -h 0',{"shell":true}); //Temporarily disable shutdown during testing
 				},10000);
 			}
 		}
