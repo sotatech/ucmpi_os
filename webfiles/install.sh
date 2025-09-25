@@ -11,6 +11,10 @@ sudo apt upgrade -y
 echo "=== Installing prerequisites ==="
 sudo apt install -y build-essential mosquitto mosquitto-clients unzip git
 
+echo "=== Installing Node-RED ==="
+sudo apt install build-essential git curl
+bash <(curl -sL https://github.com/node-red/linux-installers/releases/latest/download/update-nodejs-and-nodered-deb) // Untested. Check if this actually works.....
+
 echo "=== Installing required Node.js modules globally ==="
 # pm2 is optional but useful for autostart
 sudo npm install -g pm2
