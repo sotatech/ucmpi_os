@@ -11,6 +11,13 @@ sudo apt upgrade -y
 echo "=== Installing prerequisites ==="
 sudo apt install -y build-essential mosquitto mosquitto-clients unzip git
 
+echo "=== Installing pigpio & confirm status ==="
+sudo apt-get install -y pigpio
+sudo systemctl enable pigpiod
+sudo systemctl start pigpiod
+sudo systemctl status pigpiod
+sudo netstat -tlnp | grep pigpiod
+
 echo "=== Installing Node-RED ==="
 sudo apt install build-essential git curl
 bash <(curl -sL https://github.com/node-red/linux-installers/releases/latest/download/update-nodejs-and-nodered-deb) // Untested. Check if this actually works.....
