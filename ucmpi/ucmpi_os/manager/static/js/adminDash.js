@@ -237,7 +237,7 @@ $(document).ready(function(){
             case "watchdog/pinout":
                 if (null !== document.getElementById("watchdogled")) {
                     if (json["payload"]["status"] === 'low') {
-                        watchdogInStr = "<i class=\"fas fa-circle text-success\"></i> Low";
+                        watchdogInStr = "<i class=\"fas fa-circle text-warning\"></i> Low";
                     } else {
                         watchdogInStr = "<i class=\"fas fa-circle text-success\"></i> High";
                     }
