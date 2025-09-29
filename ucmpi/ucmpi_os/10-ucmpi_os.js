@@ -166,6 +166,7 @@ module.exports = function(RED) {
 						index = data.zone;
 					}
 					data.alarmtype = modules.getelement("alarmtypes",data.alarmtypeindex); 
+					if (data.alarmtypeindex === 0 && !data.alarmtype) data.alarmtype = "Idle";
 				}	
  				break;	
  		}
@@ -310,12 +311,12 @@ module.exports = function(RED) {
 						if (typeof msg.payload == 'object') {
 							msg.payload.status =  detailedoutput(modules.getstatus("zone",target, element), "zone", target, element);
 						} else {
-									msg = {
-										payload: {
-											status: detailedoutput(modules.getstatus("zone",target, element), "zone", target, element)
-										}
-									};
+							msg = {
+								payload: {
+									status: detailedoutput(modules.getstatus("zone",target, element), "zone", target, element)
 								}
+							};
+						}
 					} else {        			
 						msg = setdottoobj(msg,node.outputsimplifiedkey,simpleoutput(modules.getstatus("zone",target, element)[element],node.outputsimplifiedvalue));
 						if (node.zone=="*") {
@@ -370,11 +371,11 @@ module.exports = function(RED) {
         });
 
         this.on("close", function() {
-        	debug('Revoking Zone Node', node);
-        	if (node.trigger) {
-        		debug('Revoking Zone Node subscription ', node.id);
-        		modules.eventunsubscribe(node.id);
-        	}
+            debug('Revoking Zone Node', node);
+            if (node.trigger) {
+                debug('Revoking Zone Node subscription ', node.id);
+                modules.eventunsubscribe(node.id);
+            }
         });
     }
 
@@ -441,14 +442,14 @@ module.exports = function(RED) {
 					// passive just gets latest values
 					if (node.outputtype=="detailed") {
 						if (typeof msg.payload == 'object') {
-								msg.payload.status =  detailedoutput(modules.getstatus("output",target, element), "output", target, element);
-							} else {
-									msg = {
-										payload: {
-											status: detailedoutput(modules.getstatus("output",target, element), "output", target, element)
-										}
-									};
+							msg.payload.status =  detailedoutput(modules.getstatus("output",target, element), "output", target, element);
+						} else {
+							msg = {
+								payload: {
+									status: detailedoutput(modules.getstatus("output",target, element), "output", target, element)
 								}
+							};
+						}
 					} else {        			
 						msg = setdottoobj(msg,node.outputsimplifiedkey,simpleoutput(modules.getstatus("output",target, element)[element],node.outputsimplifiedvalue));
 						if (node.output=="*") {
@@ -500,19 +501,17 @@ module.exports = function(RED) {
         	}	
         });
             
-        	
+        
         this.on("close", function() {
         	if (node.trigger) {
         		modules.eventunsubscribe(node.id);
         	}
         });
-    	// on initial deployment, poll the status
-
     }
-    
-    // CytechFlagEvent  
-    
-    function CytechFlagEvent(n) {
+
+	// CytechFlagEvent
+
+	function CytechFlagEvent(n) {
         RED.nodes.createNode(this,n);
         
         this.flag = n.flag;
@@ -580,10 +579,10 @@ module.exports = function(RED) {
 									status: detailedoutput(modules.getstatus("flag",target, element), "flag", target, element)
 								}
 							};
-						}				
+						}
 					} else {        			
 						msg = setdottoobj(msg,node.outputsimplifiedkey,simpleoutput(modules.getstatus("flag",target, element)[element],node.outputsimplifiedvalue));
-						if (node.output=="*") {
+						if (node.flag=="*") {
 							// append id to msg.payload for simple outputs when node is listening to all events
 							msg.payload.id = target;
 						}
@@ -640,9 +639,9 @@ module.exports = function(RED) {
         });
     }
 
-	// Cytech Counter Event
+	// CytechCounterEvent
 
-   	function CytechCounterEvent(n) {
+	function CytechCounterEvent(n) {
         RED.nodes.createNode(this,n);
         
         this.counter = n.counter;
@@ -653,7 +652,6 @@ module.exports = function(RED) {
         this.activewait = n.activewait;
         this.outputtype = n.outputtype;
         this.outputsimplifiedkey = n.outputsimplifiedkey;
-        this.outputsimplifiedvalue = n.outputsimplifiedvalue;
         
         var node = this;
         
@@ -689,7 +687,7 @@ module.exports = function(RED) {
 				target = String(msg.payload.id);
 			}
 
-			if ((getdotfromobj(msg,node.setvalueparam)!=null)&&(target)) {
+			if ((getdotfromobj(msg,node.setvalueparam)!=null)&&(target)&&(node.setvalue)) {
 				status(node, {fill: "yellow", shape: "dot", text: "Set: Counter " + target + ":value=" + getdotfromobj(msg,node.setvalueparam)});
 				modules.requeststatus("counter",target, element,getdotfromobj(msg,node.setvalueparam));	
 			}			
@@ -713,7 +711,7 @@ module.exports = function(RED) {
 						}				
 					} else {        			
 						msg = setdottoobj(msg,node.outputsimplifiedkey,modules.getstatus("counter",target, element)[element]);
-						if (node.output=="*") {
+						if (node.counter=="*") {
 							// append id to msg.payload for simple outputs when node is listening to all events
 							msg.payload.id = target;
 						}
@@ -726,7 +724,7 @@ module.exports = function(RED) {
 						var timeout = setTimeout(function () {
 							node.warn ("Timeout expired");
 							modules.eventunsubscribe(timeout);
-						},node.activewait * 1000);
+							},node.activewait * 1000);
 						node.warn ("Subscribing to event");
 						node.msg = msg
 						modules.eventsubscribe("counter",target,element,timeout, function(type, index, element, data) {           		
@@ -770,7 +768,7 @@ module.exports = function(RED) {
         });
     }
 
-	// Cytech Sensor Event
+	// CytechSensorEvent
 
 	function CytechSensorEvent(n) {
         RED.nodes.createNode(this,n);
@@ -783,7 +781,6 @@ module.exports = function(RED) {
         this.activewait = n.activewait;
         this.outputtype = n.outputtype;
         this.outputsimplifiedkey = n.outputsimplifiedkey;
-        this.outputsimplifiedvalue = n.outputsimplifiedvalue;
         
         var node = this;
         
@@ -857,7 +854,7 @@ module.exports = function(RED) {
 						var timeout = setTimeout(function () {
 							node.warn ("Timeout expired");
 							modules.eventunsubscribe(timeout);
-						},node.activewait * 1000);
+							},node.activewait * 1000);
 						node.warn ("Subscribing to event");
 						node.msg = msg
 						modules.eventsubscribe("sensor",target,element,timeout, function(type, index, element, data) {           		
@@ -901,8 +898,7 @@ module.exports = function(RED) {
         });
     }
 
-
-	// Cytech Alarm Mode Event
+	// CytechAlarmModeEvent
 
 	function CytechAlarmModeEvent(n) {
         RED.nodes.createNode(this,n);
@@ -941,8 +937,6 @@ module.exports = function(RED) {
         
          // respond to inputs....
         this.on('input', function (msg) {
-
-
         	var passcode = node.setpassvalue; 
 			if (getdotfromobj(msg,node.setpassparam)!=null) {
 				passcode = getdotfromobj(msg,node.setpassparam);
@@ -1101,6 +1095,7 @@ module.exports = function(RED) {
         // if the node will trigger events, do stuff here...
         if (node.trigger) {
 			modules.eventsubscribe("alarm","type","status",node.id, function(type, index, element, data) {
+				console.log('Alarm Status Event received: ' + JSON.stringify(data)); // Debug log
 				status(node, {fill: "green", shape: "dot", text: "Event: Mode  =" + data["status"]});           		
 				var msg = {};
 					if (node.outputtype == "detailed") {
@@ -1174,11 +1169,40 @@ module.exports = function(RED) {
 	RED.nodes.registerType("cytech alarm status event",CytechAlarmStatusEvent);
 	RED.nodes.registerType("cytech response",CytechResponse);
     
-    RED.httpAdmin.get('/cytech/config/elements', function(req,res,next)
-    {
-    	var type = (req.query.type).toString();
-		var items = modules.getelements(type);
-		res.end(JSON.stringify(items));
-	});
+    RED.httpAdmin.get('/cytech/config/elements', function(req, res, next) {
+        var type = req.query.type.toString();
+        var items = modules.getelements(type);
+        try {
+            if (type === "zones") {
+                var zoneArray = [];
+                for (var id in items) {
+                    if (items.hasOwnProperty(id)) {
+                        var zone = items[id];
+                        var fullName = zone.name || id;
+                        if (zone.zoneword1 || zone.zoneword2 || zone.zoneword3 || zone.zoneword4) {
+                            var words = [zone.zoneword1, zone.zoneword2, zone.zoneword3, zone.zoneword4].filter(word => word && word.trim() !== "");
+                            fullName = words.length > 0 ? words.join(" ") : fullName;
+                        }
+                        zoneArray.push({
+                            id: id,
+                            number: parseInt(zone.number || id, 10),
+                            name: fullName
+                        });
+                    }
+                }
+                zoneArray.sort((a, b) => a.number - b.number);
+                var newItems = {};
+                for (var i = 0; i < zoneArray.length; i++) {
+                    var zone = zoneArray[i];
+                    newItems[zone.id] = items[zone.id];
+                    newItems[zone.id].name = zone.name;
+                }
+                items = newItems;
+            }
+            res.end(JSON.stringify(items));
+        } catch (err) {
+            res.status(500).send("Error processing zones: " + err.message);
+        }
+    });
 		
 }
