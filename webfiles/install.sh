@@ -81,9 +81,12 @@ sudo systemctl restart mosquitto
 
 echo "=== Starting UCM-Pi bridge services with pm2 ==="
 cd ~/ucmpi_os
-pm2 start core.js configuration.js UCMEth.js manager.js
+pm2 start core.js configuration.js UCMEth.js manager.js node-red
+pm2 list
 pm2 save
 
 echo "=== Installation complete ==="
 echo "Node-RED is available at http://$(hostname -I | awk '{print $1}'):1880"
 echo "Management console is at http://$(hostname -I | awk '{print $1}'):1080"
+echo "You will need to create a user account in the management console before accessing Node-Red"
+echo "Then set a UCM Login PIN and upload your current Comfigurator file."
