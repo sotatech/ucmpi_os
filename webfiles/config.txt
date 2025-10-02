@@ -1,0 +1,8 @@
+# Add this to the end of /boot/firmware/config.txt
+
+[all]
+# For UCM/Pi
+enable_uart=1
+dtoverlay=disable-bt
+dtparam=uart0=on
+
