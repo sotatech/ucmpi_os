@@ -6,8 +6,8 @@
 	support@alphawerk.co.uk
 */
 
-const _version = "2.0.0.3"
-const _date = "202589"
+const _version = "2.0.0.4"
+const _date = "202538"
 
 const express = require('express');
 const exphbs = require('express-handlebars');
@@ -24,10 +24,9 @@ const path = require('path');
 const modules = require('./modules.js');
 const uid = require('uid-safe');
 const https = require('https');
-const gpio = require('rpi-gpio');
+
 const os = require('os');
 const cp = require('child_process');
-
 
 const externalretain = modules.externalretain;
 const serialNumber = modules.serialNumber;
@@ -36,13 +35,11 @@ const app = express();
 
 const expressWs = require('express-ws')(app);
 
-
 const listenport = 1080;
 const configPath = '/etc/ucmpi_os/config';
-// New pin numbering
-const watchdogpin = 525;
-const watchdogwarn = 524;
-const alertpin = 532;
+const watchdogpin = 13;   // Output (Heartbeat to Comfort)
+const watchdogwarn = 12;  // Input (Comfort warning)
+const alertpin = 20;      // Input (Comfort alert)
 
 const watchdogcycle = 7000;
 const watchdoghigh = 2000;
@@ -79,7 +76,7 @@ modules.init("manager", _version, _date)
 // Webserver
 var hbs = exphbs.create({
     extname      :'hbs',
-	defaultLayout: false,     // Don't look for startup file main.hbs
+    defaultLayout: false,     // Don't look for startup file main.hbs
     layoutsDir   : 'manager/views',
     partialsDir  : [
         'manager/views/layouts',
@@ -108,7 +105,6 @@ hbs.handlebars.registerHelper('each', function(context, options) {
 hbs.handlebars.registerPartial('base_layout', fs.readFileSync('manager/views/layouts/base_layout.html.hbs', 'utf8'));
 //hbs.handlebars.registerPartial('base_layout', fs.readFileSync('manager/views/base_layout.html.hbs', 'utf8'));
 
-
 //Configure Express
 app.use(fileUpload());
 app.use(express.static(path.join(__dirname,'manager/views')));
@@ -135,7 +131,6 @@ app.use((req, res, next) => {
     next();
 });
 
-
 var sessionChecker = (req, res, next) => {
     if (req.session.user && req.cookies.UCMPi) {
         res.redirect('/pi');
@@ -144,8 +139,6 @@ var sessionChecker = (req, res, next) => {
     }
 };
 
-
-
 app.get('/', sessionChecker, (req,res)=> {
     if (req.session.user && req.cookies.UCMPi) {
         res.redirect('/pi');
@@ -153,7 +146,6 @@ app.get('/', sessionChecker, (req,res)=> {
         res.redirect('/login');
     }
 });
-
 
 app.route('/login')
     .get(sessionChecker, (req,res) => {
@@ -215,7 +207,6 @@ app.get('/registerbuilder', sessionChecker, (req,res) =>  {
     });
 
 });
-
 
 app.route('/register')
     .get(sessionChecker, (req,res) => {
@@ -295,8 +286,6 @@ app.route('/password')
         }
     });
 
-
-
 app.get('/logout', (req, res) => {
     if (req.session.user && req.cookies.UCMPi) {
         res.clearCookie('UCMPi');
@@ -305,7 +294,6 @@ app.get('/logout', (req, res) => {
         res.redirect('/login');
     }
 });
-
 
 app.get('/pi', (req, res) => {
     if (req.session.user && req.cookies.UCMPi) {
@@ -453,8 +441,10 @@ app.post('/api/comfigurator_upload', (req,res) => {
     });
 });
 
-
+// -----------------------------------------------------------------------------
 // Websocket stuff
+// -----------------------------------------------------------------------------
+
 app.ws('/ws', function(ws, req) {
     debug("WS session started by " + req.session.user);
     var instanceuid = uid.sync(10);
@@ -505,7 +495,7 @@ app.ws('/ws', function(ws, req) {
 
     }
 
-    // updates for all users
+    // Updates for all users
 
     sendws(ws,JSON.stringify({'topic':'serialnumber', 'payload':{'serialnumber':modules.serialNumber}}));
 
@@ -533,7 +523,6 @@ app.ws('/ws', function(ws, req) {
         sendws(ws,JSON.stringify({'topic':'message','payload': {'status':message.toString()}}));
     }, instanceuid + "ws_broadcast");
 
-
     ws.on('close', function() {
         if (req.session.admin) {
             modules.unsubscribetopic(instanceuid + "watchdog");
@@ -557,8 +546,7 @@ app.ws('/ws', function(ws, req) {
         //console.log("Websocket Closed");
     });
 
-
-// get updates from the system
+// Get updates from the system
 systemmonitor();
 if (req.session.admin) {
 	ws.on('message', function(msg) {
@@ -795,275 +783,243 @@ function sendws(ws, content) {
 
 app.listen(listenport, () => debug('[*] Listening on port %s', listenport, 1));
 
+// -----------------------------------------------------------------------------
 // Watchdog
+// -----------------------------------------------------------------------------
+
+const pigpio = require('pigpio-client').pigpio;
+const client = pigpio({ host: '::1', port: 8888 });
+
+let watchdogOut, watchdogWarnIn, alertIn;
+
+// Connect to pigpio daemon
+client.on('connected', () => {
+    console.log("✅ Connected to pigpiod on ::1:8888");
+    debug("Connected to pigpiod on ::1:8888");
+
+    // Configure Watchdog Output (pin 13)
+    watchdogOut = client.gpio(watchdogpin);
+    watchdogOut.modeSet('output');
+
+// Configure Watchdog Warning Input (pin 12)
+	watchdogWarnIn = client.gpio(watchdogwarn);
+	watchdogWarnIn.modeSet('input');
+	watchdogWarnIn.pullUpDown(1); // PUD_DOWN
+	watchdogWarnIn.notify((level) => {
+		debug(`⚡ Watchdog Warn changed: ${level ? 'HIGH' : 'LOW'}`);
+		gpioinput(watchdogwarn, level);
+	});
+
+	// Configure Alert Button Input (pin 20)
+	alertIn = client.gpio(alertpin);
+	alertIn.modeSet('input');
+	alertIn.pullUpDown(2); // PUD_UP (normally high)
+	alertIn.notify((level) => {
+		debug(`⚡ Alert Button changed: ${level ? 'HIGH' : 'LOW'}`);
+		gpioinput(alertpin, level);
+});
+
+    // Start watchdog heartbeat
+    watchdog_timer = setInterval(watchDog, watchdogcycle);
+    modules.sendretain("watchdog", "running");
+    watchdog_mode = "running";
+    debug("Watchdog heartbeat started");
+});
+
+// Heartbeat function
 function watchDog() {
-	//console.log("Watchdog High");
-	gpio.write(watchdogpin, true, (err) => {
-		if (err) {
-			debug("Error writing watchdog high");
-		} else {
-			modules.send('watchdog/pinout','high');
-			watchdog_pinout="high";
-			var timer = setTimeout(function() {
-				//console.log("Watchdog Low")
-				gpio.write(watchdogpin,false, (err) => {
-					if (err)
-						debug("Error writing watchdog low");
-					modules.send('watchdog/pinout','low');
-					watchdog_pinout="low";
-				});
+    if (!watchdogOut) {
+        console.log("⚠️ Watchdog output not initialized yet");
+        return;
+    }
 
-			}, watchdoghigh);
-		}
+    watchdogOut.write(1).then(() => {
+        debug("⚡ Watchdog HIGH");
+        modules.send('watchdog/pinout', 'high');
+        watchdog_pinout = "high";
 
-	})
+        setTimeout(() => {
+            watchdogOut.write(0).then(() => {
+                debug("⚡ Watchdog LOW");
+                modules.send('watchdog/pinout', 'low');
+                watchdog_pinout = "low";
+            }).catch(err => {
+                debug("❌ Error writing watchdog LOW: " + err);
+            });
+        }, watchdoghigh);
+    }).catch(err => {
+        debug("❌ Error writing watchdog HIGH: " + err);
+    });
 }
 
+/**
+ * Handle comfort button presses and publish to MQTT.
+ * Publishes messages to topic: uhai/manager/alert
+ * 
+ * Mapping:
+ *  - Tap (<5s)          → "tapped"
+ *  - Hold >5s           → "5 seconds"
+ *  - Hold >15s          → "15 seconds"
+ *  - Hold >30s          → "30 seconds"
+ */
 function function_button(delta) {
-	if (delta>30000) {
-		//more than 30 seconds
-		debug("Alert Button Pressed more than 30 seconds");
-		modules.send("alert","30 seconds");
-	} else if (delta>15000) {
-		//more than 15 seconds
-		debug("Alert Button Pressed more than 15 seconds");
-		modules.send("alert","15 seconds");
-	} else if (delta>5000) {
-		//mode than 5 seconds
-		debug("Alert Button Pressed more than 5 seconds");
-		modules.send("alert","5 seconds");
-
-
-
-	} else if (delta>100) {
-		//a tap
-		debug("Alert Button Tapped")
-		modules.send("alert","tapped");
-
-		// this also sends a notice to the server of the local ip address for help locating it on a network
-		var ifaces = os.networkInterfaces();
-		var interfaces = {};
-		Object.keys(ifaces).forEach(function (ifname) {
-			var alias = 0;
-
-			ifaces[ifname].forEach(function (iface) {
-				if ('IPv4' !== iface.family || iface.internal !== false) {
-					// skip over internal (i.e. 127.0.0.1) and non-ipv4 addresses
-					return;
-				}
-
-				if (alias >= 1) {
-					// this single interface has multiple ipv4 addresses
-					//console.log(ifname + ':' + alias, iface.address);
-					interfaces[ifname + ":" + alias]=iface.address;
-				} else {
-					// this interface has only one ipv4 adress
-					//console.log(ifname, iface.address);
-					interfaces[ifname]=iface.address;
-				}
-				++alias;
-			});
-		});
-		request.post({
-			headers: {'content-type': 'application/json'},
-			url: 'https://uhai.alphawerk.co.uk/api/findme',
-			form: {serialnumber: serialNumber,
-				key: key||"",
-				interfaces : interfaces}
-		}, (error, response, body)=> {
-			if (error) {
-				//console.log('It went wrong');
-				// changed res -> response
-				//response.send({status: 'error', error: err});
-				//key = tempkey;
-				//modules.sendretain(('key'),key);
-				// changed res -> response
-				//response.send({redirect:'/'});
-			} else {
-				//console.log('Response ' + response)
-				//console.log('Body' + body);
-			}
-		});
-
-	} else {
-		debug("Alert Button Debounce trapped")
-	}
+    if (delta > 30000) {
+        modules.send("alert", "30 seconds");
+        console.log("▶️ Comfort button held 30 seconds");
+    } else if (delta > 15000) {
+        modules.send("alert", "15 seconds");
+        console.log("▶️ Comfort button held 15 seconds");
+    } else if (delta > 5000) {
+        modules.send("alert", "5 seconds");
+        console.log("▶️ Comfort button held 5 seconds");
+    } else if (delta > 100) {
+        modules.send("alert", "tapped");
+        console.log("▶️ Comfort button tapped");
+    }
+    // Ignore anything shorter (debounce)
 }
 
-
+// GPIO Input handler
 function gpioinput(channel, value) {
-	if (channel == alertpin) {
-		if (value) {
-			// start timer
-			starttime = new Date().valueOf();
-		} else {
-			var delta = new Date().valueOf() - starttime;
-			starttime = new Date().valueOf();
-			function_button(delta);
-		}
-	} else if (channel == watchdogwarn) {
-		if (value) {
-			modules.send("watchdog/warning", "high");
-			if (watchdog_reboot) {
-				clearTimeout(watchdog_reboot);
-				watchdog_reboot = null;
-				debug("Watchdog shutdown cancelled")	;
-			}
-		} else {
-			modules.send("watchdog/warning", "low");
-			if (!watchdog_reboot) {
+    const state = (value === 1) ? 'high' : 'low';
 
-				debug("Watchdog preparing for shutdown");
-				watchdog_reboot = setTimeout(() => {
-					debug("System shut down");
-				//	cp.spawn('sudo shutdown -h 0',{"shell":true}); //Temporarily disable shutdown during testing
-				},10000);
-			}
-		}
-	} else {
-		debug("GPIO on " + channel + " : " + value);
-	}
+    if (channel === alertpin) {
+        if (value === 1) {
+            starttime = Date.now();
+        } else {
+            const delta = Date.now() - starttime;
+            starttime = Date.now();
+            function_button(delta);
+        }
+    } else if (channel === watchdogwarn) {
+        if (value === 1) {
+            modules.send("watchdog/warning", "high");
+            if (watchdog_reboot) {
+                clearTimeout(watchdog_reboot);
+                watchdog_reboot = null;
+                debug("Watchdog shutdown cancelled");
+            }
+        } else {
+            modules.send("watchdog/warning", "low");
+            if (!watchdog_reboot) {
+                debug("Watchdog preparing for shutdown");
+                watchdog_reboot = setTimeout(() => {
+                    debug("System shut down");
+                    // cp.spawn('sudo shutdown -h 0', {"shell": true});
+                }, 10000);
+            }
+        }
+    } else {
+        debug("GPIO on " + channel + " : " + state);
+    }
 }
 
-modules.subscribetopic("uhai/manager/watchdog/control", (topic,message) => {
-	debug("received message for watchdog " + message)
-	if (message == "pause") {
-		if (watchdog_timer)
-			clearInterval(watchdog_timer);
-		watchdog_timer=null;
-		gpio.write(watchdogpin, true, (err) => {
-			if (err) {
-				modules.sendretain("watchdog","pause error");
-				debug("Error Pausing Watchdog");
-			} else {
-				modules.sendretain("watchdog","paused");
-				modules.send('watchdog/pinout','high');
-				watchdog_mode="paused";
-				watchdog_pinout="high";
-				debug("Watchdog Paused");
-			}
+// -----------------------------------------------------------------------------
+// Watchdog Control (pause / run / reboot)
+// -----------------------------------------------------------------------------
 
-		});
-	}
-	if (message == "reboot") {
-		if (watchdog_timer)
-			clearInterval(watchdog_timer);
-		watchdog_timer=null;
-		gpio.write(watchdogpin, false, (err) => {
-			if (err) {
-				modules.sendretain("watchdog","reboot error");
-				debug("Error Forcing Watchdog Reboot");
-			} else {
-				modules.send('watchdog/pinout','low');
-				modules.sendretain("watchdog","rebooting");
-				watchdog_mode="rebooting";
-				watchdog_pinout="low";
-				debug("Watchdog Force Reboot");
-			}
+modules.subscribetopic("uhai/manager/watchdog/control", (topic, message) => {
+    const msg = message.toString().trim();   // <— convert Buffer to string
+    debug("Received message for watchdog: " + msg);
 
-		});
-	}
-	if (message == "run") {
-		if (watchdog_timer)
-			clearInterval(watchdog_timer);
-		watchdog_timer = setInterval(watchDog, watchdogcycle);
-		modules.sendretain("watchdog","running");
-		watchdog_mode="running";
-		debug("Watchdog Running");
+    if (msg === "pause") {
+        if (watchdog_timer) clearInterval(watchdog_timer);
+        watchdog_timer = null;
 
-	}
+        if (watchdogOut) watchdogOut.write(1); // force high
+        modules.sendretain("watchdog", "paused");
+        modules.send("watchdog/pinout", "high");
+        watchdog_mode = "paused";
+        watchdog_pinout = "high";
+        debug("Watchdog Paused");
+
+    } else if (msg === "reboot") {
+        if (watchdog_timer) clearInterval(watchdog_timer);
+        watchdog_timer = null;
+
+        if (watchdogOut) watchdogOut.write(0); // force low
+        modules.send("watchdog/pinout", "low");
+        modules.sendretain("watchdog", "rebooting");
+        watchdog_mode = "rebooting";
+        watchdog_pinout = "low";
+        debug("Watchdog Force Reboot");
+
+    } else if (msg === "run") {
+        if (watchdog_timer) clearInterval(watchdog_timer);
+
+        watchdog_timer = setInterval(watchDog, watchdogcycle);
+        modules.sendretain("watchdog", "running");
+        watchdog_mode = "running";
+        debug("Watchdog Running");
+    }
 });
 
-// GPIO
-
-gpio.setMode(gpio.MODE_BCM);
-
-gpio.setup(watchdogpin, gpio.DIR_HIGH, (err) => {
-	if (err) {
-		//console.log("Error setting watchdog pin " + err);
-	} else {
-		watchdog_timer = setInterval(watchDog, watchdogcycle);
-		modules.sendretain("watchdog","running");
-		watchdog_mode="running";
-		debug("Watchdog Running");
-	}
-});
-//console.log("Setting Watchdog Warn Pin Mode");
-gpio.setup(watchdogwarn, gpio.DIR_IN, gpio.EDGE_BOTH, (err) => {
-	if (err) {
-		//console.log("Error setting watchdog warn pin " + err);
-	} else {
-		gpio.read(watchdogwarn, function(err, value) {gpioinput(watchdogwarn,value)});
-	}
-});
-//console.log("Setting Alert Pin Mode");
-gpio.setup(alertpin, gpio.DIR_IN, gpio.EDGE_BOTH,(err) => {
-	if (err) {
-
-	}
-	//console.log("Error setting alert pin " + err);
-});
-gpio.on('change', (channel, value) => (gpioinput(channel, value)));
-
+// -----------------------------------------------------------------------------
 // System Monitoring
+// -----------------------------------------------------------------------------
 
 function systemmonitor() {
-	cp.exec('df  -h / | tail -1 | awk \'{print $4}\'', (error, stdout, stderr) => {
-		if (error) {
-			modules.sendretain("system/disk/error", error);
-		} else {
-			modules.sendretain("system/disk",stdout);
-		}
-	});
-	cp.exec('free -h | sed -n \'2p\' | awk \'{print $4}\'', (error, stdout, stderr) => {
-		if (error) {
-			modules.sendretain("system/memory/error", error);
-		} else {
-			modules.sendretain("system/memory",stdout);
-		}
-	});
-	cp.exec('cat /proc/loadavg | awk \'{print $1}\'', (error, stdout, stderr) => {
-		if (error) {
-			modules.sendretain("system/loadindex/error", error);
-		} else {
-			modules.sendretain("system/loadindex",stdout);
-		}
-	});
-	cp.exec('service ssh status | grep inactive', function(error, stdout, stderr) {
-		//console.log ("response from ssh test " + stdout.length);
-		if (stdout.length>20) {
-			modules.sendretain("system/ssh", "false")
-		} else {
-			modules.sendretain("system/ssh", "true")
-		}
-	});
-	cp.exec('cat /proc/uptime | awk \'{print $1}\'', (error, stdout, stderr) => {
-		if (error) {
-			modules.sendretain("system/uptime/error", error);
-		} else {
-			modules.sendretain("system/uptimesecs",stdout);
-			var seconds = parseInt(stdout, 10);
-			var days = Math.floor(seconds / (3600*24));
-			seconds  -= days*3600*24;
-			var hrs   = Math.floor(seconds / 3600);
-			seconds  -= hrs*3600;
-			var mnts = Math.floor(seconds / 60);
-			seconds  -= mnts*60;
-			modules.sendretain("system/uptimetext",days+" days, "+hrs+" hrs, "+mnts+" mins, "+seconds+" secs");
-		}
-	});
-	gpio.read(watchdogwarn, function(err, value) {gpioinput(watchdogwarn,value)});
+    cp.exec('df -h / | tail -1 | awk \'{print $4}\'', (error, stdout) => {
+        if (error) {
+            modules.sendretain("system/disk/error", error);
+        } else {
+            modules.sendretain("system/disk", stdout);
+        }
+    });
 
+    cp.exec('free -h | sed -n \'2p\' | awk \'{print $4}\'', (error, stdout) => {
+        if (error) {
+            modules.sendretain("system/memory/error", error);
+        } else {
+            modules.sendretain("system/memory", stdout);
+        }
+    });
 
+    cp.exec('cat /proc/loadavg | awk \'{print $1}\'', (error, stdout) => {
+        if (error) {
+            modules.sendretain("system/loadindex/error", error);
+        } else {
+            modules.sendretain("system/loadindex", stdout);
+        }
+    });
+
+    cp.exec('service ssh status | grep inactive', (error, stdout) => {
+        if (stdout.length > 20) {
+            modules.sendretain("system/ssh", "false");
+        } else {
+            modules.sendretain("system/ssh", "true");
+        }
+    });
+
+    cp.exec('cat /proc/uptime | awk \'{print $1}\'', (error, stdout) => {
+        if (error) {
+            modules.sendretain("system/uptime/error", error);
+        } else {
+            modules.sendretain("system/uptimesecs", stdout);
+            var seconds = parseInt(stdout, 10);
+            var days = Math.floor(seconds / (3600 * 24));
+            seconds -= days * 3600 * 24;
+            var hrs = Math.floor(seconds / 3600);
+            seconds -= hrs * 3600;
+            var mnts = Math.floor(seconds / 60);
+            seconds -= mnts * 60;
+            modules.sendretain("system/uptimetext",
+                days + " days, " + hrs + " hrs, " + mnts + " mins, " + seconds + " secs"
+            );
+        }
+    });
+
+    // Watchdogwarn check
+    if (watchdogWarnIn) {
+        watchdogWarnIn.read().then(value => {
+            gpioinput(watchdogwarn, value);
+        }).catch(err => {
+            debug("Error reading watchdogwarn GPIO: " + err);
+        });
+    }
 }
 
-
-systemhealth_timer = setInterval(function() {
-	systemmonitor();
-}, systemhealthcycle);
-
-// simulate function button on restart.
-function_button(500);
+systemhealth_timer = setInterval(systemmonitor, systemhealthcycle);
 
 function sendUsersTable(ws) {
 	request("http://localhost:1080/users_table", function (error, response, body) {
