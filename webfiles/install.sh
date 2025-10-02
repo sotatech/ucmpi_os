@@ -20,7 +20,7 @@ sudo netstat -tlnp | grep pigpiod
 
 echo "=== Installing Node-RED ==="
 sudo apt install build-essential git curl
-bash <(curl -sL https://github.com/node-red/linux-installers/releases/latest/download/update-nodejs-and-nodered-deb) --confirm-pi --confirm-install
+bash <(curl -sL https://github.com/node-red/linux-installers/releases/latest/download/update-nodejs-and-nodered-deb) --confirm-pi --confirm-install --no-init
 // Untested. Check if this actually works.....
 
 echo "=== Installing required Node.js modules globally ==="
