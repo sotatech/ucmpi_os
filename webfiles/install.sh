@@ -12,7 +12,7 @@ echo "=== Installing prerequisites ==="
 sudo apt install -y build-essential mosquitto mosquitto-clients unzip git
 
 echo "=== Installing pigpio & confirm status ==="
-sudo apt-get install -y pigpio
+# sudo apt-get install -y pigpio
 sudo systemctl enable pigpiod
 sudo systemctl start pigpiod
 sudo systemctl status pigpiod
