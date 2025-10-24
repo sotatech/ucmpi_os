@@ -4,24 +4,33 @@
 
 set -e
 
+echo "=== Make sure Node-RED has been installed beforehand ==="
 echo "=== Updating system packages ==="
 sudo apt update
 sudo apt upgrade -y
 
 echo "=== Installing prerequisites ==="
-sudo apt install -y build-essential mosquitto mosquitto-clients unzip git
+sudo apt install -y build-essential mosquitto mosquitto-clients unzip git curl
 
 echo "=== Installing pigpio & confirm status ==="
 # sudo apt-get install -y pigpio
+# This package does not come with Debial Trixie, so clone and build pigpio. Not needed for earlier Devian versions.
+
+git clone https://github.com/joan2937/pigpio.git
+cd pigpio
+make
+sudo make install
 sudo systemctl enable pigpiod
 sudo systemctl start pigpiod
+echo "=== Verify pigpio status ==="
 sudo systemctl status pigpiod
 sudo netstat -tlnp | grep pigpiod
 
-echo "=== Installing Node-RED ==="
-sudo apt install build-essential git curl
+cd ~
+#echo "=== Installing Node-RED ==="
+#sudo apt install build-essential git curl
 # bash <(curl -sL https://github.com/node-red/linux-installers/releases/latest/download/update-nodejs-and-nodered-deb) --confirm-pi --confirm-install --no-init
-# Untested. Check if this actually works.....
+# Untested. Check if this actually works.....it doesn't. Run the Node-RED script before the install.
 
 echo "=== Installing required Node.js modules globally ==="
 # pm2 is optional but useful for autostart
@@ -85,6 +94,9 @@ cd ~/ucmpi_os
 pm2 start core.js configuration.js UCMEth.js manager.js node-red
 pm2 list
 pm2 save
+pm2 startup
+echo "=== Saving PM2 Startup Script ==="
+sudo env PATH=$PATH:/usr/bin /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u pi --hp /home/pi
 
 echo "=== Installation complete ==="
 echo "Node-RED is available at http://$(hostname -I | awk '{print $1}'):1880"
