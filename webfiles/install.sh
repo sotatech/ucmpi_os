@@ -96,10 +96,12 @@ cd ~/ucmpi_os
 pm2 start core.js configuration.js UCMEth.js manager.js node-red
 pm2 list
 pm2 save
-pm2 startup
-echo "=== Saving PM2 Startup Script ==="
-sudo env PATH=$PATH:/usr/bin /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u pi --hp /home/pi
 
+echo "=== Saving PM2 Startup Script ==="
+echo "=== Run this command and the script below to automate PM2 startup ==="
+echo "sudo env PATH=$PATH:/usr/bin /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u pi --hp /home/pi"
+echo "\n"
+echo "\n"
 echo "=== Installation complete ==="
 echo "Node-RED is available at http://$(hostname -I | awk '{print $1}'):1880"
 echo "Management console is at http://$(hostname -I | awk '{print $1}'):1080"
