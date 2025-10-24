@@ -15,11 +15,13 @@ sudo apt install -y build-essential mosquitto mosquitto-clients unzip git curl
 echo "=== Installing pigpio & confirm status ==="
 # sudo apt-get install -y pigpio
 # This package does not come with Debial Trixie, so clone and build pigpio. Not needed for earlier Devian versions.
-
+sudo apt install -y python3-setuptools python3-full
 git clone https://github.com/joan2937/pigpio.git
 cd pigpio
 make
 sudo make install
+sudo ln -s /usr/local/bin/pigpiod /usr/bin
+sudo cp util/pigpiod.service /etc/systemd/system
 sudo systemctl enable pigpiod
 sudo systemctl start pigpiod
 echo "=== Verify pigpio status ==="
