@@ -31,8 +31,8 @@ NB You can skip down to 'Installing Node-Red and the alphaWerk components' if yo
 
 `sudo raspi-config` from the command line.
 
-1. Select Menu `5 Interfacing Options`
-2. Select Menu `P6 Serial`
+1. Select Menu `3 Interfacing Options`
+2. Select Menu `I6 Serial`
 3. Answer `<No>` to `Would you like a login shell to be acccessible over serial?`
 4. Answer `<Yes>` to `Would you like the serial port hardware to be enable?`
 5. Select Menu `7 Advanced Options`
@@ -41,9 +41,9 @@ NB You can skip down to 'Installing Node-Red and the alphaWerk components' if yo
 
 Log back into the UCM-Pi once it has rebooted.
 
-### Edit /boot/config.txt
+### Edit /boot/firmware/config.txt
 
-`sudo nano /boot/config.txt` from the command line.
+`sudo nano /boot/firmware/config.txt` from the command line.
 
 add the following to the bottom of the text file.
 
@@ -55,10 +55,14 @@ dtparam=uart0=on
 
 ## Installing Node-Red and the alphaWerk components
 
-execute the following command
+This is the official script to install Node.js, npm and Node-RED onto a Raspberry Pi. The script can also be used to upgrade an existing install when a new release is available:
+
+bash <(curl -sL https://github.com/node-red/linux-installers/releases/latest/download/update-nodejs-and-nodered-deb)
+
+Then execute the following command to run the UCM/Pi installation script:
 
 ```
-curl -sL https://raw.githubusercontent.com/alphawerk/ucmpi_os/main/webfiles/install.sh | bash -
+curl -sL https://raw.githubusercontent.com/sotatech/ucmpi_os/main/webfiles/install.sh | bash -
 ```
 
 ## All Done
