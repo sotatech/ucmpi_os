@@ -1,0 +1,69 @@
+// Publish current alarm mode to homeassistant/alarm/comfort/alarm_mode/status.
+// Also controls the Home Assistant entity sensor.comfort_alarm_mode.
+// Changes the alarm mode from Comfort format to values that the HA MQTT Alarm Panel understands.
+
+let data;
+
+if (msg.payload?.event) {
+    data = msg.payload.event;
+} else if (msg.payload?.status) {
+    data = msg.payload.status;
+} else {
+    node.log("Invalid message received " + JSON.stringify(msg))
+    return msg;
+}
+
+// Get the alarm mode and convert it to HA alarm panel format.
+// Alarm Modes: [off, away, night, day, vacation, arming, arming waiting on zone, entry delay, exit delay]
+
+let payload = "";
+let mode = "";
+
+if (data.status !== "") {
+    switch (data.status) {
+        case "arming":
+        case "exit delay":
+            payload = "arming";
+            mode = "arming";
+            break;
+        case "arming, waiting on zone":
+            payload = "pending";
+            mode = "pending";
+            break;
+        case "away":
+            payload = "armed_away";
+            mode = "armed_away";
+            break;
+        case "day":
+            payload = "armed_home";
+            mode = "armed_home";
+            break;
+        case "entry delay":
+            payload = "disarming";
+            mode = "disarming";
+            break;
+        case "off":
+            payload = "disarmed";
+            mode = "disarmed";
+            break;
+        case "night":
+            payload = "armed_night";
+            mode = "armed_night";
+            break;
+        case "vacation":
+            payload = "armed_vacation";
+            mode = "armed_vacation";
+            break;
+        default:
+            node.log("Invalid status received " + JSON.stringify(msg))
+            payload = ""; // or assign a suitable default value
+    }
+}
+
+// Set the topic based on the data
+const topic = "homeassistant/alarm/comfort/" + data.type + "_" + data.index + "/status"
+msg.topic = topic;
+msg.payload = payload;
+
+const newMsg = { payload: mode };
+return [msg, newMsg];
